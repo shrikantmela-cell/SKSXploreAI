@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="The ultimate Step-Up SIP and Lumpsum Calculator for Indian investors. Calculate monthly compounding, incremental investments, and parallel lumpsum injections with precision." />
+    <meta name="keywords" content="SIP Calculator, Step Up SIP, Mutual Fund Calculator, Lumpsum Calculator, India, Compound Interest, Wealth Planner, Financial Independence" />
+    <meta name="author" content="GrowthStack" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="GrowthStack | Advanced AI-Powered SIP Calculator" />
+    <meta property="og:description" content="Plan your financial freedom with the most advanced Step-Up SIP calculator. Features monthly breakdowns, inflation adjustment, and parallel injections." />
+    <meta property="og:image" content="https://growthstack.app/og-image.jpg" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:title" content="GrowthStack | Advanced AI-Powered SIP Calculator" />
+    <meta property="twitter:description" content="Precise wealth planning with Step-Up logic and multi-stage lumpsum injections." />
+
+    <title>GrowthStack | Advanced SIP & Step-Up Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.5s ease-in-out',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Schema.org Structured Data for AI & SEO -->
+    <script type="application/ld+json">
+    [
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "GrowthStack SIP Calculator",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "Web",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "INR"
+        },
+        "description": "A professional-grade financial calculator for computing Future Value of investments using Step-Up SIP and Lumpsum methodologies. It accounts for monthly compounding, annual increment rates, and parallel capital injections.",
+        "featureList": "Step-Up SIP, Lumpsum Calculation, Monthly Breakdown, Yearly Breakdown, Inflation Adjustment, Interactive Charts",
+        "author": {
+          "@type": "Organization",
+          "name": "GrowthStack"
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is a Step-Up SIP?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "A Step-Up SIP allows you to increase your monthly investment amount periodically (usually annually) to account for an increase in income and inflation, helping you reach your financial goals faster."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does parallel lumpsum injection work?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Parallel lumpsum injection refers to adding one-time large amounts to your existing SIP portfolio at specific intervals (e.g., yearly bonuses). This helps in compounding wealth more effectively alongside regular monthly contributions."
+            }
+          }
+        ]
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "HowTo",
+        "name": "How to calculate SIP returns with Step-Up",
+        "step": [
+          {
+            "@type": "HowToStep",
+            "name": "Enter Monthly Investment",
+            "text": "Input your starting monthly SIP amount."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Set Step-Up Amount",
+            "text": "Define the fixed amount by which you will increase your SIP every year."
+          },
+          {
+            "@type": "HowToStep",
+            "name": "Analyze Returns",
+            "text": "View the interactive chart and detailed monthly breakdown to see your wealth growth."
+          }
+        ]
+      }
+    ]
+    </script>
+
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f5f9;
+      }
+      .dark ::-webkit-scrollbar-track {
+        background: #1e293b;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "recharts": "https://aistudiocdn.com/recharts@^3.4.1",
+    "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0"
+  }
+}
+</script>
+</head>
+  <body class="bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300">
+    <div id="root"></div>
+  </body>
+</html>
