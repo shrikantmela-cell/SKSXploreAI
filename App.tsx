@@ -17,7 +17,8 @@ import {
   Tooltip as RechartsTooltip, 
   ResponsiveContainer,
   Legend,
-  Brush
+  Brush,
+  ReferenceLine
 } from 'recharts';
 import { 
   TrendingUp, 
@@ -36,7 +37,12 @@ import {
   ChevronUp,
   AlertCircle,
   FileSpreadsheet,
-  ShieldCheck
+  ShieldCheck,
+  Target,
+  CheckCircle2,
+  Flag,
+  Wallet,
+  FileImage
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -66,19 +72,23 @@ const App: React.FC = () => {
     monthlyInvestment: 10000,
     lumpsumInvestment: 100000,
     annualInterestRate: 12,
+    inflationRate: 6,
     durationYears: 10,
     stepUpAmount: 1000,
     stepUpFrequency: StepUpFrequency.YEARLY,
-    additionalLumpsums: []
+    additionalLumpsums: [],
+    targetAmount: undefined
   };
 
   // --- Calculator State ---
   const [state, setState] = useState<CalculatorState>(DEFAULT_STATE);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isGoalMode, setIsGoalMode] = useState(false);
 
   const [showDocs, setShowDocs] = useState(false);
   const [showMonthly, setShowMonthly] = useState(false);
   const [showYearly, setShowYearly] = useState(true);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   
   // newLumpsum now supports month
   const [newLumpsum, setNewLumpsum] = useState<{year: number, month: number, amount: number}>({
@@ -88,36 +98,44 @@ const App: React.FC = () => {
   });
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
 
   // --- Calculations ---
   const result = useMemo(() => calculateSIP(state), [state]);
 
   // --- Handlers ---
   const handleInputChange = (field: keyof CalculatorState, value: any) => {
-    let cleanValue = Number(value);
+    let cleanValue = value === '' ? undefined : Number(value);
     let newErrors = { ...errors };
     let isValid = true;
 
     // Input Validation Logic
     if (field === 'annualInterestRate') {
-       if (cleanValue < 0 || cleanValue > 50) {
+       if (cleanValue !== undefined && (cleanValue < 0 || cleanValue > 50)) {
          newErrors[field] = 'Interest Rate must be between 0% and 50%';
          isValid = false;
        } else {
          delete newErrors[field];
        }
+    } else if (field === 'inflationRate') {
+       if (cleanValue !== undefined && (cleanValue < 0 || cleanValue > 30)) {
+         newErrors[field] = 'Inflation Rate must be between 0% and 30%';
+         isValid = false;
+       } else {
+         delete newErrors[field];
+       }
     } else if (field === 'durationYears') {
-       if (cleanValue < 1 || cleanValue > 50) {
+       if (cleanValue !== undefined && (cleanValue < 1 || cleanValue > 50)) {
          newErrors[field] = 'Duration must be between 1 and 50 years';
          isValid = false;
        } else {
          delete newErrors[field];
        }
-    } else if (['monthlyInvestment', 'lumpsumInvestment', 'stepUpAmount'].includes(field)) {
-       if (cleanValue < 0) {
+    } else if (['monthlyInvestment', 'lumpsumInvestment', 'stepUpAmount', 'targetAmount'].includes(field)) {
+       if (cleanValue !== undefined && cleanValue < 0) {
          newErrors[field] = 'Amount cannot be negative';
          isValid = false;
-       } else if (cleanValue > 100000000) { // 10 Cr limit for sanity
+       } else if (cleanValue !== undefined && cleanValue > 1000000000) { // 100 Cr limit for sanity
          newErrors[field] = 'Amount exceeds calculator limit';
          isValid = false;
        } else {
@@ -133,6 +151,7 @@ const App: React.FC = () => {
       if (window.confirm('Are you sure you want to reset the calculator to default values?')) {
           setState(DEFAULT_STATE);
           setNewLumpsum({ year: 1, month: 6, amount: 50000 });
+          setIsGoalMode(false);
           setErrors({});
       }
   };
@@ -172,6 +191,7 @@ const App: React.FC = () => {
               img.src = url;
           }
       }
+      setShowExportMenu(false);
   };
 
   const handleDownloadCSV = () => {
@@ -185,6 +205,7 @@ const App: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setShowExportMenu(false);
   };
 
   const addLumpsum = () => {
@@ -205,6 +226,19 @@ const App: React.FC = () => {
     }));
   };
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   // --- Custom Chart Tooltip ---
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -212,7 +246,7 @@ const App: React.FC = () => {
       const interestEarned = data.value - data.invested;
       
       return (
-        <div className="bg-slate-800/95 backdrop-blur text-white p-4 rounded-lg shadow-xl border border-slate-700 text-sm animate-fade-in">
+        <div className="bg-slate-800/95 backdrop-blur text-white p-4 rounded-lg shadow-xl border border-slate-700 text-sm animate-fade-in z-50">
           <p className="font-bold mb-2 border-b border-slate-600 pb-1">
             Year {data.year} <span className="text-slate-400 font-normal text-xs ml-1">(Month {data.monthIndex})</span>
           </p>
@@ -236,8 +270,13 @@ const App: React.FC = () => {
             </div>
             
             <div className="pt-2 mt-1 border-t border-slate-600 flex justify-between gap-8">
-              <span className="font-bold text-white">Total Value:</span>
+              <span className="font-bold text-white">Nominal Value:</span>
               <span className="font-bold font-mono text-white">{formatCurrency(data.value)}</span>
+            </div>
+
+            <div className="flex justify-between gap-8 text-xs">
+              <span className="text-orange-300">Real Value (Inf. Adj):</span>
+              <span className="font-mono text-orange-300">{formatCurrency(data.realValue)}</span>
             </div>
           </div>
         </div>
@@ -266,14 +305,14 @@ const App: React.FC = () => {
             <div className="bg-indigo-600 p-2 rounded-lg group-hover:bg-indigo-500 transition-colors">
               <TrendingUp className="text-white w-5 h-5" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               Growth<span className="text-indigo-600 dark:text-indigo-400">Stack</span>
             </h1>
-            <span className="hidden md:inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700">
-              v1.2.0
+            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700">
+              v1.0.0
             </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 sm:gap-4">
             <div title="Toggle Dark Mode">
               <button 
                 onClick={() => setDarkMode(!darkMode)}
@@ -294,7 +333,7 @@ const App: React.FC = () => {
             </div>
             <button 
               onClick={() => setShowDocs(true)}
-              className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors"
+              className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors p-2 sm:p-0"
               title="View Calculation Formulas & Methodology"
             >
               <BookOpen size={18} />
@@ -341,7 +380,15 @@ const App: React.FC = () => {
                 </div>
             </div>
             <p className="text-4xl font-bold">{formatCompactCurrency(result.totalWealth)}</p>
-            <p className="text-xs text-indigo-200 mt-2 font-mono">{formatCurrency(result.totalWealth)}</p>
+            <div className="flex items-center gap-2 mt-2 text-indigo-200/80 border-t border-indigo-500/30 pt-2">
+                <Wallet size={14} />
+                <p className="text-xs font-mono">
+                     Real Value: {formatCompactCurrency(result.totalRealWealth)}
+                </p>
+                 <div className="text-white">
+                    <InfoTooltip text={`Adjusted for ${state.inflationRate}% inflation. This is what the final amount is worth in today's money.`} />
+                 </div>
+            </div>
           </div>
         </div>
 
@@ -351,7 +398,7 @@ const App: React.FC = () => {
           <div className="lg:col-span-4 space-y-6">
             
             {/* Mode Selector */}
-            <div className="bg-slate-200 dark:bg-slate-800 p-1 rounded-lg flex gap-1 shadow-inner">
+            <div className="bg-slate-200 dark:bg-slate-800 p-1 rounded-lg flex gap-1 shadow-inner overflow-x-auto">
                {[
                  { id: CalculatorMode.SIP, label: 'SIP', icon: Calendar, tooltip: "Regular Monthly Investment" },
                  { id: CalculatorMode.STEP_UP, label: 'Step Up', icon: TrendingUp, tooltip: "SIP that increases every year" },
@@ -361,7 +408,7 @@ const App: React.FC = () => {
                    key={m.id}
                    title={m.tooltip}
                    onClick={() => handleInputChange('mode', m.id)}
-                   className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                   className={`flex-1 min-w-[80px] flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
                      state.mode === m.id 
                        ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' 
                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-700/50'
@@ -438,7 +485,7 @@ const App: React.FC = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <div>
                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                         Exp. Return (%)
@@ -459,6 +506,26 @@ const App: React.FC = () => {
                    </div>
                    <div>
                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        Inflation Rate (%)
+                        <InfoTooltip text="Average annual inflation. Used to calculate the 'Real Value' of your corpus. Typically 5-7% in India." />
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          max="30"
+                          value={state.inflationRate}
+                          onChange={(e) => handleInputChange('inflationRate', e.target.value)}
+                          className={`w-full pl-3 pr-8 py-2 border ${errors.inflationRate ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-slate-300 dark:border-slate-600 focus:ring-indigo-500 focus:border-indigo-500'} bg-white dark:bg-slate-900 rounded-lg focus:ring-2 dark:text-white outline-none transition-all`}
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">%</span>
+                      </div>
+                      {errors.inflationRate && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><AlertCircle size={12}/> {errors.inflationRate}</p>}
+                   </div>
+                </div>
+                
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                         Duration (Years)
                         <InfoTooltip text="How long you plan to stay invested. Longer duration leverages the power of compounding." />
                       </label>
@@ -471,23 +538,77 @@ const App: React.FC = () => {
                         className={`w-full px-3 py-2 border ${errors.durationYears ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-slate-300 dark:border-slate-600 focus:ring-indigo-500 focus:border-indigo-500'} bg-white dark:bg-slate-900 rounded-lg focus:ring-2 dark:text-white outline-none transition-all`}
                       />
                       {errors.durationYears && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><AlertCircle size={12}/> {errors.durationYears}</p>}
-                   </div>
+                    <input 
+                        type="range" 
+                        min="1" 
+                        max="40" 
+                        step="1" 
+                        value={state.durationYears}
+                        onChange={(e) => handleInputChange('durationYears', e.target.value)}
+                        className="w-full mt-2 accent-indigo-600 dark:accent-indigo-500"
+                    />
                 </div>
-                <input 
-                    type="range" 
-                    min="1" 
-                    max="40" 
-                    step="1" 
-                    value={state.durationYears}
-                    onChange={(e) => handleInputChange('durationYears', e.target.value)}
-                    className="w-full accent-indigo-600 dark:accent-indigo-500"
-                  />
+
               </div>
+            </section>
+
+            {/* Financial Goal Section */}
+            <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors duration-300">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <Target className="w-5 h-5 text-indigo-500" />
+                        Financial Goal
+                        <InfoTooltip text="Set a target corpus amount. We will tell you if and when you reach it." />
+                    </h2>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input 
+                            type="checkbox" 
+                            className="sr-only peer"
+                            checked={isGoalMode}
+                            onChange={(e) => {
+                                setIsGoalMode(e.target.checked);
+                                if (!e.target.checked) {
+                                    handleInputChange('targetAmount', undefined);
+                                }
+                            }}
+                        />
+                        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-indigo-600"></div>
+                    </label>
+                </div>
+
+                {isGoalMode && (
+                    <div className="animate-slide-in">
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                            Target Corpus Amount (₹)
+                        </label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
+                            <input
+                                type="number"
+                                min="0"
+                                placeholder="e.g. 10000000"
+                                value={state.targetAmount || ''}
+                                onChange={(e) => handleInputChange('targetAmount', e.target.value)}
+                                className={`w-full pl-8 pr-3 py-2 border ${errors.targetAmount ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-slate-300 dark:border-slate-600 focus:ring-indigo-500 focus:border-indigo-500'} bg-white dark:bg-slate-900 rounded-lg focus:ring-2 dark:text-white outline-none transition-all`}
+                            />
+                        </div>
+                         {errors.targetAmount && <p className="mt-1 text-xs text-red-500 flex items-center gap-1"><AlertCircle size={12}/> {errors.targetAmount}</p>}
+                         <input 
+                            type="range" 
+                            min="100000" 
+                            max="50000000" 
+                            step="100000" 
+                            value={state.targetAmount || 0}
+                            onChange={(e) => handleInputChange('targetAmount', e.target.value)}
+                            className="w-full mt-2 accent-indigo-600 dark:accent-indigo-500"
+                         />
+                    </div>
+                )}
             </section>
 
             {/* Step Up Settings (Only for Step Up Mode) */}
             {state.mode === CalculatorMode.STEP_UP && (
-              <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors duration-300 animate-in fade-in slide-in-from-top-2">
+              <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors duration-300 animate-slide-in">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-indigo-500" />
                   Step-Up Configuration
@@ -629,35 +750,83 @@ const App: React.FC = () => {
 
           {/* Right Column: Charts & Data */}
           <div className="lg:col-span-8 space-y-8">
+
+            {/* Goal Status Card */}
+            {isGoalMode && state.targetAmount && state.targetAmount > 0 && (
+                <div className={`rounded-xl shadow-sm border p-6 transition-all duration-500 animate-slide-in ${
+                    result.goalAchievedMonth 
+                    ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800' 
+                    : 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800'
+                }`}>
+                    <div className="flex items-start gap-4">
+                        <div className={`p-3 rounded-full ${result.goalAchievedMonth ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-400' : 'bg-amber-100 text-amber-600 dark:bg-amber-900 dark:text-amber-400'}`}>
+                            {result.goalAchievedMonth ? <CheckCircle2 size={28} /> : <Flag size={28} />}
+                        </div>
+                        <div>
+                            <h3 className={`text-lg font-bold mb-1 ${result.goalAchievedMonth ? 'text-emerald-800 dark:text-emerald-200' : 'text-amber-800 dark:text-amber-200'}`}>
+                                {result.goalAchievedMonth ? 'Goal Achieved!' : 'Goal Pending'}
+                            </h3>
+                            {result.goalAchievedMonth ? (
+                                <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                                    You will reach your target of <strong>{formatCompactCurrency(state.targetAmount)}</strong> in 
+                                    <span className="font-bold mx-1">{result.goalAchievedMonth.year} Years and {result.goalAchievedMonth.month} Months</span>.
+                                </p>
+                            ) : (
+                                <p className="text-sm text-amber-700 dark:text-amber-300">
+                                    You will reach <strong>{formatCompactCurrency(result.totalWealth)}</strong> ({((result.totalWealth / state.targetAmount) * 100).toFixed(1)}% of goal) in {state.durationYears} years.
+                                    Consider increasing your SIP or Duration.
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
             
             {/* Main Chart */}
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors duration-300 relative">
               <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     Wealth Growth Projection
-                    <InfoTooltip text="Visual representation of how your money grows over time. The purple area is your wealth, the grey area is your investment." />
+                    <InfoTooltip text="Visual representation of how your money grows over time. The purple area is your wealth, the dashed orange line is the inflation-adjusted 'real' value." />
                 </h3>
-                <div className="flex gap-2">
+                
+                <div className="flex items-center gap-2">
                     <div className="hidden md:flex text-xs text-slate-500 items-center mr-2">
                         <span className="inline-block w-2 h-2 bg-indigo-500 rounded-full mr-1"></span> Drag bottom bar to zoom
                     </div>
-                    <button 
-                        onClick={handleDownloadCSV}
-                        className="flex items-center gap-1 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                        title="Export Full Report as CSV"
-                    >
-                        <FileSpreadsheet size={14} /> <span className="hidden sm:inline">Export CSV</span>
-                    </button>
-                    <button 
-                        onClick={handleDownloadChart}
-                        className="flex items-center gap-1 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                        title="Save Chart Image as PNG"
-                    >
-                        <Download size={14} /> <span className="hidden sm:inline">Export Chart</span>
-                    </button>
+                    
+                    <div className="relative" ref={exportMenuRef}>
+                        <button 
+                            onClick={() => setShowExportMenu(!showExportMenu)}
+                            className="flex items-center gap-1 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                        >
+                            <Download size={14} /> Export Report <ChevronDown size={14} />
+                        </button>
+                        
+                        {showExportMenu && (
+                            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50 border border-slate-100 dark:border-slate-700 overflow-hidden animate-zoom-in origin-top-right">
+                                <div className="py-1">
+                                    <button 
+                                        onClick={handleDownloadCSV}
+                                        className="flex items-center w-full px-4 py-2 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left gap-2"
+                                    >
+                                        <FileSpreadsheet size={14} className="text-green-600 dark:text-green-400" />
+                                        Export Full Report (CSV)
+                                    </button>
+                                    <button 
+                                        onClick={handleDownloadChart}
+                                        className="flex items-center w-full px-4 py-2 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left gap-2"
+                                    >
+                                        <FileImage size={14} className="text-indigo-600 dark:text-indigo-400" />
+                                        Export Chart (PNG)
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
               </div>
-              <div className="h-[400px] w-full" ref={chartContainerRef}>
+              <div className="h-[300px] sm:h-[400px] w-full" ref={chartContainerRef}>
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
                     data={result.monthlyData}
@@ -671,6 +840,10 @@ const App: React.FC = () => {
                       <linearGradient id="colorInvested" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.3}/>
                         <stop offset="95%" stopColor="#94a3b8" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorReal" x1="0" y1="0" x2="0" y2="1">
+                         <stop offset="5%" stopColor="#fb923c" stopOpacity={0.2}/>
+                         <stop offset="95%" stopColor="#fb923c" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? "#334155" : "#e2e8f0"} />
@@ -700,6 +873,7 @@ const App: React.FC = () => {
                       strokeWidth={2}
                       animationDuration={1500}
                       animationEasing="ease-out"
+                      activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }}
                     />
                     <Area 
                       type="monotone" 
@@ -711,7 +885,34 @@ const App: React.FC = () => {
                       strokeWidth={3}
                       animationDuration={1500}
                       animationEasing="ease-out"
+                      activeDot={{ r: 8, strokeWidth: 3, stroke: '#fff', fill: '#4f46e5' }}
                     />
+                     <Area 
+                      type="monotone" 
+                      dataKey="realValue" 
+                      name="Real Value (Inf. Adj)" 
+                      stroke="#fb923c" 
+                      fillOpacity={1} 
+                      fill="url(#colorReal)" 
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      animationDuration={1500}
+                      animationEasing="ease-out"
+                      activeDot={{ r: 8, strokeWidth: 3, stroke: '#fff', fill: '#fb923c' }}
+                    />
+                    {isGoalMode && state.targetAmount && (
+                        <ReferenceLine 
+                            y={state.targetAmount} 
+                            stroke="#10b981" 
+                            strokeDasharray="3 3" 
+                            label={{ 
+                                position: 'top', 
+                                value: 'Goal', 
+                                fill: '#10b981',
+                                fontSize: 12 
+                            }} 
+                        />
+                    )}
                     <Brush 
                         dataKey="year" 
                         height={30} 
@@ -749,6 +950,10 @@ const App: React.FC = () => {
                         <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Invested</th>
                         <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Interest Earned</th>
                         <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Value</th>
+                        <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-orange-500 dark:text-orange-400 uppercase tracking-wider">
+                            Real Value
+                            <InfoTooltip text="This is the purchasing power of your future corpus in today's money, calculated by discounting the total value by the inflation rate." />
+                        </th>
                         </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
@@ -765,6 +970,9 @@ const App: React.FC = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-indigo-600 dark:text-indigo-400 font-bold">
                             {formatCurrency(row.totalValue)}
+                            </td>
+                             <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-orange-500 dark:text-orange-400 font-medium">
+                            {formatCurrency(row.realValue)}
                             </td>
                         </tr>
                         ))}

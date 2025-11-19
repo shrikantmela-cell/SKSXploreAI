@@ -1,3 +1,4 @@
+
 import { CalculationResult, CalculatorState, MonthlyDataPoint, StepUpFrequency, YearlyResult, CalculatorMode } from "../types";
 
 /**
@@ -21,15 +22,23 @@ export const calculateSIP = (state: CalculatorState): CalculationResult => {
         monthlyInvestment,
         lumpsumInvestment,
         annualInterestRate,
+        inflationRate,
         durationYears,
         stepUpAmount,
         stepUpFrequency,
-        additionalLumpsums
+        additionalLumpsums,
+        targetAmount
     } = state;
 
     const totalMonths = durationYears * 12;
     // Monthly Rate (r) = Annual Rate / 12 / 100
     const monthlyRate = annualInterestRate / 12 / 100;
+    
+    // Inflation Discount Factor
+    // We calculate Real Value by discounting the nominal value by the inflation rate over time.
+    // Annual Inflation i. Monthly inflation factor approx (1+i)^(1/12) or simply i/12 for simple approximation.
+    // Standard Real Value formula: Nominal / (1 + inflation)^Years
+    const annualInflationDecimal = (inflationRate || 0) / 100;
 
     // Initialize based on mode
     let currentBalance = 0;
@@ -48,6 +57,7 @@ export const calculateSIP = (state: CalculatorState): CalculationResult => {
     
     const monthlyData: MonthlyDataPoint[] = [];
     const yearlyBreakdown: YearlyResult[] = [];
+    let goalAchievedMonth: { year: number, month: number } | undefined = undefined;
 
     // Helper to check if we have lumpsums for a specific month index (1-based global index)
     const getAdditionalLumpsumsForMonth = (monthIndex: number) => {
@@ -96,12 +106,26 @@ export const calculateSIP = (state: CalculatorState): CalculationResult => {
         
         totalInvested += investmentThisMonth;
 
+        // Calculate Real Value (Purchasing Power)
+        // Discount factor based on time elapsed (years)
+        const timeInYears = m / 12;
+        const realValue = currentBalance / Math.pow(1 + annualInflationDecimal, timeInYears);
+
+        // Goal Check
+        // Check against Nominal Value (standard practice)
+        if (targetAmount && currentBalance >= targetAmount && !goalAchievedMonth) {
+            const currentYear = Math.ceil(m / 12);
+            const currentMonthInYear = ((m - 1) % 12) + 1;
+            goalAchievedMonth = { year: currentYear, month: currentMonthInYear };
+        }
+
         // Record Data for Charts/Tables
         monthlyData.push({
             monthIndex: m,
             year: Math.ceil(m / 12),
             invested: totalInvested,
             value: currentBalance,
+            realValue: realValue,
             installment: currentMonthlyInstallment
         });
 
@@ -111,17 +135,23 @@ export const calculateSIP = (state: CalculatorState): CalculationResult => {
                 year: Math.ceil(m / 12),
                 investedAmount: totalInvested,
                 totalValue: currentBalance,
+                realValue: realValue,
                 interestEarned: currentBalance - totalInvested
             });
         }
     }
+    
+    // Final Real Wealth
+    const finalRealWealth = currentBalance / Math.pow(1 + annualInflationDecimal, durationYears);
 
     return {
         totalInvested,
         totalWealth: currentBalance,
+        totalRealWealth: finalRealWealth,
         totalGain: currentBalance - totalInvested,
         monthlyData,
-        yearlyBreakdown
+        yearlyBreakdown,
+        goalAchievedMonth
     };
 };
 
@@ -132,22 +162,27 @@ export const generateCSV = (result: CalculationResult): string => {
     
     // Summary Section
     csv += 'SUMMARY\n';
-    csv += 'Total Invested,Total Wealth,Total Gain\n';
-    csv += `${Math.round(result.totalInvested)},${Math.round(result.totalWealth)},${Math.round(result.totalGain)}\n\n`;
+    csv += 'Total Invested,Total Wealth (Nominal),Total Wealth (Real/Inflation Adjusted),Total Gain\n';
+    csv += `${Math.round(result.totalInvested)},${Math.round(result.totalWealth)},${Math.round(result.totalRealWealth)},${Math.round(result.totalGain)}\n\n`;
+
+    // Goal
+    if (result.goalAchievedMonth) {
+        csv += `GOAL ACHIEVED IN,Year ${result.goalAchievedMonth.year} Month ${result.goalAchievedMonth.month}\n\n`;
+    }
 
     // Yearly Breakdown
     csv += 'YEARLY BREAKDOWN\n';
-    csv += 'Year,Invested Amount,Interest Earned,Total Value\n';
+    csv += 'Year,Invested Amount,Interest Earned,Total Value (Nominal),Real Value (Inflation Adjusted)\n';
     result.yearlyBreakdown.forEach(row => {
-        csv += `${row.year},${Math.round(row.investedAmount)},${Math.round(row.interestEarned)},${Math.round(row.totalValue)}\n`;
+        csv += `${row.year},${Math.round(row.investedAmount)},${Math.round(row.interestEarned)},${Math.round(row.totalValue)},${Math.round(row.realValue)}\n`;
     });
     csv += '\n';
 
     // Monthly Breakdown
     csv += 'MONTHLY BREAKDOWN\n';
-    csv += 'Month,Year,Monthly Installment,Total Invested,Total Value\n';
+    csv += 'Month,Year,Monthly Installment,Total Invested,Total Value,Real Value\n';
     result.monthlyData.forEach(row => {
-        csv += `${row.monthIndex},${row.year},${Math.round(row.installment)},${Math.round(row.invested)},${Math.round(row.value)}\n`;
+        csv += `${row.monthIndex},${row.year},${Math.round(row.installment)},${Math.round(row.invested)},${Math.round(row.value)},${Math.round(row.realValue)}\n`;
     });
 
     return csv;

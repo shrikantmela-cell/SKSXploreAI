@@ -1,3 +1,4 @@
+
 export enum StepUpFrequency {
     MONTHLY = 'MONTHLY',
     YEARLY = 'YEARLY'
@@ -21,10 +22,12 @@ export interface CalculatorState {
     monthlyInvestment: number;
     lumpsumInvestment: number; // Initial investment for Lumpsum mode
     annualInterestRate: number;
+    inflationRate: number; // New: Annual Inflation Rate
     durationYears: number;
     stepUpAmount: number;
     stepUpFrequency: StepUpFrequency;
     additionalLumpsums: LumpsumInjection[];
+    targetAmount?: number; // Optional Financial Goal
 }
 
 export interface YearlyResult {
@@ -32,6 +35,7 @@ export interface YearlyResult {
     investedAmount: number;
     interestEarned: number;
     totalValue: number;
+    realValue: number; // New: Inflation Adjusted
 }
 
 export interface MonthlyDataPoint {
@@ -39,13 +43,16 @@ export interface MonthlyDataPoint {
     year: number;
     invested: number;
     value: number;
+    realValue: number; // New: Inflation Adjusted
     installment: number; // The SIP installment amount for this specific month
 }
 
 export interface CalculationResult {
     totalInvested: number;
     totalWealth: number;
+    totalRealWealth: number; // New: Inflation Adjusted Final Wealth
     totalGain: number;
     monthlyData: MonthlyDataPoint[];
     yearlyBreakdown: YearlyResult[];
+    goalAchievedMonth?: { year: number, month: number }; // When the goal was hit
 }
