@@ -35,7 +35,8 @@ import {
   ChevronDown,
   ChevronUp,
   AlertCircle,
-  FileSpreadsheet
+  FileSpreadsheet,
+  ShieldCheck
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -125,9 +126,6 @@ const App: React.FC = () => {
     }
 
     setErrors(newErrors);
-
-    // Update state even if invalid (to let user type), but maybe we clamp for calculations if needed
-    // For now, we just update state, but UI shows error.
     setState(prev => ({ ...prev, [field]: cleanValue }));
   };
 
@@ -260,37 +258,44 @@ const App: React.FC = () => {
 
   // --- Render ---
   return (
-    <div className="min-h-screen font-sans pb-20 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    <div className="min-h-screen font-sans flex flex-col bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300">
       {/* Header */}
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-indigo-600 p-2 rounded-lg">
+          <div className="flex items-center gap-2 group">
+            <div className="bg-indigo-600 p-2 rounded-lg group-hover:bg-indigo-500 transition-colors">
               <TrendingUp className="text-white w-5 h-5" />
             </div>
             <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
               Growth<span className="text-indigo-600 dark:text-indigo-400">Stack</span>
             </h1>
+            <span className="hidden md:inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700">
+              v1.2.0
+            </span>
           </div>
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-2 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
-              aria-label="Toggle Dark Mode"
-            >
-              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
-            <button 
-              onClick={handleReset}
-              className="p-2 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
-              title="Reset All Values"
-              aria-label="Reset Calculator"
-            >
-              <RotateCcw size={20} />
-            </button>
+            <div title="Toggle Dark Mode">
+              <button 
+                onClick={() => setDarkMode(!darkMode)}
+                className="p-2 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Toggle Dark Mode"
+              >
+                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+            </div>
+            <div title="Reset Calculator to Defaults">
+              <button 
+                onClick={handleReset}
+                className="p-2 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Reset Calculator"
+              >
+                <RotateCcw size={20} />
+              </button>
+            </div>
             <button 
               onClick={() => setShowDocs(true)}
               className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors"
+              title="View Calculation Formulas & Methodology"
             >
               <BookOpen size={18} />
               <span className="hidden sm:inline">Methodology</span>
@@ -299,31 +304,42 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         
         {/* Top Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 relative overflow-hidden transition-colors duration-300">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 relative overflow-hidden transition-colors duration-300 group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
               <DollarSign size={64} className="text-indigo-600 dark:text-indigo-400" />
             </div>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Invested</p>
+            <div className="flex items-center gap-2 mb-1">
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Invested</p>
+                <InfoTooltip text="The total principal amount you will pay from your pocket over the entire duration." />
+            </div>
             <p className="text-3xl font-bold text-slate-900 dark:text-white">{formatCompactCurrency(result.totalInvested)}</p>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 font-mono">{formatCurrency(result.totalInvested)}</p>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 relative overflow-hidden transition-colors duration-300">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 relative overflow-hidden transition-colors duration-300 group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
               <TrendingUp size={64} className="text-emerald-600 dark:text-emerald-400" />
             </div>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Estimated Gains</p>
+            <div className="flex items-center gap-2 mb-1">
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Estimated Gains</p>
+                <InfoTooltip text="The total wealth generated purely from compound interest (Wealth minus Principal)." />
+            </div>
             <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{formatCompactCurrency(result.totalGain)}</p>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 font-mono">{formatCurrency(result.totalGain)}</p>
           </div>
 
-          <div className="bg-indigo-600 dark:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-200 dark:shadow-none p-6 relative overflow-hidden text-white transition-colors duration-300">
-             <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-indigo-500 dark:bg-indigo-600 rounded-full opacity-50 blur-2xl"></div>
-            <p className="text-sm font-medium text-indigo-100 mb-1">Future Value</p>
+          <div className="bg-indigo-600 dark:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-200 dark:shadow-none p-6 relative overflow-hidden text-white transition-colors duration-300 group">
+             <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-indigo-500 dark:bg-indigo-600 rounded-full opacity-50 blur-2xl group-hover:blur-3xl transition-all"></div>
+            <div className="flex items-center gap-2 mb-1">
+                <p className="text-sm font-medium text-indigo-100">Future Value</p>
+                <div className="text-indigo-200">
+                     <InfoTooltip text="The final maturity value of your investment at the end of the selected duration." />
+                </div>
+            </div>
             <p className="text-4xl font-bold">{formatCompactCurrency(result.totalWealth)}</p>
             <p className="text-xs text-indigo-200 mt-2 font-mono">{formatCurrency(result.totalWealth)}</p>
           </div>
@@ -337,12 +353,13 @@ const App: React.FC = () => {
             {/* Mode Selector */}
             <div className="bg-slate-200 dark:bg-slate-800 p-1 rounded-lg flex gap-1 shadow-inner">
                {[
-                 { id: CalculatorMode.SIP, label: 'SIP', icon: Calendar },
-                 { id: CalculatorMode.STEP_UP, label: 'Step Up', icon: TrendingUp },
-                 { id: CalculatorMode.LUMPSUM, label: 'Lumpsum', icon: Coins },
+                 { id: CalculatorMode.SIP, label: 'SIP', icon: Calendar, tooltip: "Regular Monthly Investment" },
+                 { id: CalculatorMode.STEP_UP, label: 'Step Up', icon: TrendingUp, tooltip: "SIP that increases every year" },
+                 { id: CalculatorMode.LUMPSUM, label: 'Lumpsum', icon: Coins, tooltip: "One-time Investment" },
                ].map((m) => (
                  <button
                    key={m.id}
+                   title={m.tooltip}
                    onClick={() => handleInputChange('mode', m.id)}
                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
                      state.mode === m.id 
@@ -369,6 +386,7 @@ const App: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Total Lumpsum Investment (₹)
+                      <InfoTooltip text="The single amount you wish to invest today." />
                     </label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
@@ -395,6 +413,7 @@ const App: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Monthly Investment (₹)
+                      <InfoTooltip text="The amount you commit to saving every month." />
                     </label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
@@ -423,7 +442,7 @@ const App: React.FC = () => {
                    <div>
                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                         Exp. Return (%)
-                        <InfoTooltip text="The expected annual rate of return on your investment. Historically, equity mutual funds in India have delivered 12-15% returns over long periods (10+ years)." />
+                        <InfoTooltip text="The expected annual rate of return. Equity Mutual Funds in India typically average 12-15% over 10+ years." />
                       </label>
                       <div className="relative">
                         <input
@@ -441,7 +460,7 @@ const App: React.FC = () => {
                    <div>
                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                         Duration (Years)
-                        <InfoTooltip text="Inflation reduces purchasing power over time. A ₹1 Cr corpus today may be worth only ~₹40-50 Lakhs in real value after 15 years. Consider increasing duration or amount to counter this." />
+                        <InfoTooltip text="How long you plan to stay invested. Longer duration leverages the power of compounding." />
                       </label>
                       <input
                         type="number"
@@ -472,13 +491,14 @@ const App: React.FC = () => {
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-indigo-500" />
                   Step-Up Configuration
-                  <InfoTooltip text="Increasing your SIP amount periodically helps you adjust for inflation and reach your financial goals significantly faster. Even a small annual increase of 5-10% can double your corpus over long durations." />
+                  <InfoTooltip text="Automatically increase your SIP amount periodically to match salary hikes and beat inflation." />
                 </h2>
 
                 <div className="space-y-5">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                         Increment Amount (₹)
+                         <InfoTooltip text="The fixed amount to add to your monthly SIP. E.g., If SIP is 5000 and Increment is 1000, next year SIP will be 6000." />
                       </label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">₹</span>
@@ -496,7 +516,7 @@ const App: React.FC = () => {
                     <div>
                       <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                         Increment Frequency
-                        <InfoTooltip text="Monthly: Add amount every month (Aggressive). Yearly: Add amount every year (Standard)." />
+                        <InfoTooltip text="How often the SIP amount increases. Yearly is standard. Monthly is aggressive." />
                       </label>
                       <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-900 rounded-lg">
                         <button
@@ -522,7 +542,7 @@ const App: React.FC = () => {
                <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                  <PlusCircle className="w-5 h-5 text-indigo-500" />
                  Parallel Injections
-                 <InfoTooltip text="Parallel injections are one-time lumpsum amounts added to your portfolio at specific years/months. These amounts immediately start compounding along with your existing corpus, significantly boosting the final maturity value by taking advantage of the remaining time period." />
+                 <InfoTooltip text="Add extra one-time investments (like bonuses) at specific dates. These get added to your pot and compound immediately." />
                </h2>
 
                <div className="space-y-4">
@@ -530,7 +550,10 @@ const App: React.FC = () => {
                  <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
                     <div className="grid grid-cols-2 gap-3 mb-3">
                       <div>
-                        <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Year</label>
+                        <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase flex items-center gap-1">
+                            Year
+                            <InfoTooltip text="The year (from start) when you add this money." />
+                        </label>
                         <select 
                           value={newLumpsum.year}
                           onChange={(e) => setNewLumpsum({...newLumpsum, year: Number(e.target.value)})}
@@ -542,7 +565,10 @@ const App: React.FC = () => {
                         </select>
                       </div>
                       <div>
-                        <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Month</label>
+                        <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase flex items-center gap-1">
+                            Month
+                             <InfoTooltip text="The specific month in that year." />
+                        </label>
                         <select 
                           value={newLumpsum.month}
                           onChange={(e) => setNewLumpsum({...newLumpsum, month: Number(e.target.value)})}
@@ -588,6 +614,7 @@ const App: React.FC = () => {
                         </div>
                         <button 
                           onClick={() => removeLumpsum(item.id)}
+                          title="Remove this injection"
                           className="text-slate-300 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                         >
                           <Trash2 size={18} />
@@ -606,22 +633,25 @@ const App: React.FC = () => {
             {/* Main Chart */}
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors duration-300 relative">
               <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Wealth Growth Projection</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    Wealth Growth Projection
+                    <InfoTooltip text="Visual representation of how your money grows over time. The purple area is your wealth, the grey area is your investment." />
+                </h3>
                 <div className="flex gap-2">
                     <div className="hidden md:flex text-xs text-slate-500 items-center mr-2">
-                        <span className="inline-block w-2 h-2 bg-indigo-500 rounded-full mr-1"></span> Drag to zoom
+                        <span className="inline-block w-2 h-2 bg-indigo-500 rounded-full mr-1"></span> Drag bottom bar to zoom
                     </div>
                     <button 
                         onClick={handleDownloadCSV}
                         className="flex items-center gap-1 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                        title="Export Report as CSV"
+                        title="Export Full Report as CSV"
                     >
                         <FileSpreadsheet size={14} /> <span className="hidden sm:inline">Export CSV</span>
                     </button>
                     <button 
                         onClick={handleDownloadChart}
                         className="flex items-center gap-1 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                        title="Export Chart as PNG"
+                        title="Save Chart Image as PNG"
                     >
                         <Download size={14} /> <span className="hidden sm:inline">Export Chart</span>
                     </button>
@@ -701,7 +731,10 @@ const App: React.FC = () => {
                   className="w-full px-6 py-4 flex items-center justify-between text-left border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
               >
                  <div>
-                     <h3 className="text-lg font-bold text-slate-900 dark:text-white">Yearly Breakdown</h3>
+                     <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        Yearly Breakdown
+                        <InfoTooltip text="See how your money grows year by year." />
+                     </h3>
                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Detailed summary of your investment growth by year.</p>
                  </div>
                  {showYearly ? <ChevronUp className="text-slate-500" /> : <ChevronDown className="text-slate-500" />}
@@ -747,7 +780,10 @@ const App: React.FC = () => {
                   onClick={() => setShowMonthly(!showMonthly)}
                   className="w-full px-6 py-4 flex items-center justify-between text-left bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
                 >
-                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">Monthly Breakdown</h3>
+                   <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        Monthly Breakdown
+                        <InfoTooltip text="Granular view of every month's balance." />
+                   </h3>
                    {showMonthly ? <ChevronUp className="text-slate-500" /> : <ChevronDown className="text-slate-500" />}
                 </button>
                 
@@ -784,6 +820,22 @@ const App: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* Ownership Footer */}
+      <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-6 mt-auto">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+             <div className="text-xs text-slate-500 dark:text-slate-400 text-center md:text-left">
+                 <p className="mb-1">© 2024 GrowthStack. All Rights Reserved.</p>
+                 <p className="font-mono opacity-70">Owner ID: USER-ID-OWNER-V1-SECURE-7782</p>
+             </div>
+             <div className="flex items-center gap-4">
+                 <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-3 py-1 rounded-full border border-amber-200 dark:border-amber-800">
+                    <ShieldCheck size={14} />
+                    <span>Audited Financial Logic</span>
+                 </div>
+             </div>
+         </div>
+      </footer>
 
       <Documentation isOpen={showDocs} onClose={() => setShowDocs(false)} />
     </div>
